@@ -99,41 +99,89 @@ class AES:
     Entrada:
       key: bytearray de 16 24 o 32 bytes
       Polinomio_Irreducible: Entero que representa el polinomio para construir el cuerpo
-      SBox: equivalente a la tabla 4, pág. 14
-      InvSBOX: equivalente a la tabla 6, pág. 23
-      Rcon: equivalente a la tabla 5, pág. 17
-      InvMixMatrix : equivalente a la matriz usada en 5.3.3, pág. 24
+    SBox: equivalente a la tabla 4, pág. 14
+    InvSBOX: equivalente a la tabla 6, pág. 23
+    Rcon: equivalente a la tabla 5, pág. 17
+    InvMixMatrix: equivalente a la matriz usada en 5.3.3, pág. 24
     '''
     def __init__(self, key, Polinomio_Irreducible = 0x11B):
-        self.Polinomio_Irreducible
-        self.SBox
-        self.InvSBox
-        self.Rcon
-        self.InvMixMatrix
+        self.key = key
+        self.Polinomio_Irreducible = Polinomio_Irreducible
+        self.GF = G_F(self.Polinomio_Irreducible)
+
+        self.SBox = [0]*256;
+        for i in range(len(self.SBox)):
+            b = self.GF.inverso(i)
+            for j in range(8):
+                bi = (b >> j) & 1
+                bi4 = (b >> (j + 4)%8) & 1
+                bi5 = (b >> (j + 5)%8) & 1
+                bi6 = (b >> (j + 6)%8) & 1
+                bi7 = (b >> (j + 7)%8) & 1
+                ci = (0x63 >> j) & 1
+                bit = bi^bi4^bi5^bi6^bi7^ci
+                self.SBox[i] |= bit << j
+
+        self.InvSBox = [0]*256;
+        for i in range(len(self.InvSBox)):
+            self.InvSBox[self.SBox[i]] = i
+
+        self.Rcon = [[0x01, 0x00, 0x00, 0x00], [0x02, 0x00, 0x00, 0x00],
+                    [0x04, 0x00, 0x00, 0x00], [0x08, 0x00, 0x00, 0x00],
+                    [0x10, 0x00, 0x00, 0x00], [0x20, 0x00, 0x00, 0x00],
+                    [0x40, 0x00, 0x00, 0x00], [0x80, 0x00, 0x00, 0x00],
+                    [0x1b, 0x00, 0x00, 0x00], [0x36, 0x00, 0x00, 0x00]]
+
+        self.InvMixMatrix = [0x0e, 0x0b, 0x0d, 0x09,
+                             0x09, 0x0e, 0x0b, 0x0d,
+                             0x0d, 0x09, 0x0e, 0x0b,
+                             0x0b, 0x0d, 0x09, 0x0e]
 
     '''
     5.1.1 SUBBYTES()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def SubBytes(self, State):
+        for i in range(len(State)):
+            r = State[i] >> 4
+            c = State[i] & 0x0F
+            State[i] = self.SBox[r*16 + c]
+        return State
 
     '''
     5.3.2 INVSUBBYTES()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def InvSubBytes(self, State):
+        for i in range(len(State)):
+            r = State[i] >> 4
+            c = (State[i] & 0x0F)
+            State[i] = self.InvSBox[r*16 + c]
+        return State
 
     '''
     5.1.2 SHIFTROWS()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def ShiftRows(self, State):
+        newState = [0]*16
+        for i in range(16):
+            r = int(i/4)
+            c = i%4
+            newState[r + c*4] = State[r + ((c + r)%4)*4] # State ordenado por columnas
+        return newState
 
     '''
     5.3.1 INVSHIFTROWS()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def InvShiftRows(self, State):
+        newState = [0]*16
+        for i in range(16):
+            r = int(i/4)
+            c = i%4
+            newState[r + c*4] = State[r + ((c - r)%4)*4] # State ordenado por columnas
+        return newState
 
     '''
     5.1.3 MIXCOLUMNS()
