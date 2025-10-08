@@ -12,11 +12,45 @@ class G_F:
         i-ésima tenga valor a=g**i y la segunda tal que en la posición a-ésima
         tenga el valor i tal que a=g**i. (g generador del cuerpo finito
         representado por el menor entero entre 0 y 255.)
+        Se usa una optimización típica en algoritmos de GF(2^8): duplicamos
+        Tabla_EXP para permitir indexación sin tener que calcular el módulo.
         '''
         self.Polinomio_Irreducible = Polinomio_Irreducible
-        self.Tabla_EXP
-        self.Tabla_LOG
-        self.g 
+        gFound = False
+        self.g = 0x2
+        while not gFound:
+            self.Tabla_EXP = [0]*512
+            self.Tabla_LOG = [0]*256
+            self.Tabla_EXP[0] = 1
+            self.Tabla_LOG[1] = 0
+            gi = self.g
+            for i in range(1, 255):
+                self.Tabla_EXP[i] = gi
+                self.Tabla_LOG[gi] = i
+                gi = self.productoPolinomico(gi, self.g)
+            if gi == 0x1:
+                gFound = True
+            else:
+                self.g += 1
+        # Duplicamos Tabla_EXP
+        for i in range(255, 512):
+            self.Tabla_EXP[i] = self.Tabla_EXP[i - 255]
+
+    def productoPolinomico(self, a, b):
+        '''
+        Entrada: dos elementos del cuerpo representados por enteros entre 0 y 255
+        Salida: un elemento del cuerpo representado por un entero entre 0 y 255
+        que es el producto en el cuerpo de la entrada.
+        Se calcula usando la definición en términos de polinomios ya que se usa
+        para construir las tablas Tabla_EXP y Tabla_LOG.
+        '''
+        res = 0
+        while b:
+            if b & 1:
+                res ^= a
+            a = self.xTimes(a)
+            b >>= 1
+        return res
 
     def xTimes(self, n):
         '''
@@ -42,7 +76,9 @@ class G_F:
         '''
         logA = self.Tabla_LOG[a]
         logB = self.Tabla_LOG[b]
-        return self.Tabla_EXP[(logA + logB) % 255]
+        return self.Tabla_EXP[logA + logB]
+        # no hace falta hacer el módulo (logA + logB)%255 gracias a la optimización
+        # de duplicar Tabla_EXP que hemos hecho en la función __init__
 
     def inverso(self, n):
         '''
@@ -56,7 +92,7 @@ class G_F:
             return 0
         
         logN = self.Tabla_LOG[n]
-        return self.Tabla_EXP[(255 - logN) % 255]
+        return self.Tabla_EXP[255 - logN]
 
 class AES:
     '''
