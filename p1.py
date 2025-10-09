@@ -16,7 +16,7 @@ class G_F:
         self.Polinomio_Irreducible = Polinomio_Irreducible
 
         gFound = False
-        self.g = 0x2 
+        self.g = 0x02 
         self.Tabla_EXP = [0] * 512
         self.Tabla_LOG = [0] * 256
         self.Tabla_EXP[0] = 1
@@ -34,7 +34,7 @@ class G_F:
                 self.Tabla_LOG[exp_val] = i
             
             exp_val = self.productoPolinomico(exp_val, self.g) # exp_val es g^255
-            if valid and exp_val == 1:  # Ha d'acabar diferent a 1, ja que l'1 es g^0
+            if valid and exp_val == 0x01:
                 gFound = True
             else:
                 self.g += 1
@@ -76,6 +76,8 @@ class G_F:
     Se calcula usando la definición en términos de Tabla_EXP y Tabla_LOG.
     '''
     def producto(self, a, b):
+        if a == 0 or b == 0:
+            return 0
         logA = self.Tabla_LOG[a]
         logB = self.Tabla_LOG[b]
         return self.Tabla_EXP[logA + logB]
@@ -195,22 +197,50 @@ class AES:
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def MixColumns(self, State):
-        pass
+        newState = [0]*16
+        for c in range(4):  # Para cada columna
+            s0, s1, s2, s3 = State[0 + c*4], State[1 + c*4], State[2 + c*4], State[3 + c*4]
+            newState[0 + c*4] = self.auxMixColumns(s0, s1, s2, s3)
+            newState[1 + c*4] = self.auxMixColumns(s1, s2, s3, s0)
+            newState[2 + c*4] = self.auxMixColumns(s2, s3, s0, s1)
+            newState[3 + c*4] = self.auxMixColumns(s3, s0, s1, s2)
+        return newState
+    
+    def auxMixColumns(self,s0,s1,s2,s3):
+        return (self.GF.producto(0x02, s0) ^
+                self.GF.producto(0x03, s1) ^ 
+                s2 ^ s3)
 
     '''
     5.3.3 INVMIXCOLUMNS()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def InvMixColumns(self, State):
-        pass
+        newState = [0]*16
+        for c in range(4):  # Para cada columna
+            s0, s1, s2, s3 = State[0 + c*4], State[1 + c*4], State[2 + c*4], State[3 + c*4]
+            newState[0 + c*4] = self.auxInvMixColumns(s0, s1, s2, s3)
+            newState[1 + c*4] = self.auxInvMixColumns(s1, s2, s3, s0)
+            newState[2 + c*4] = self.auxInvMixColumns(s2, s3, s0, s1)
+            newState[3 + c*4] = self.auxInvMixColumns(s3, s0, s1, s2)
+        return newState
+    
+    def auxInvMixColumns(self, s0, s1, s2, s3):  #Crec que es mes elegant que multiplicar matrius
+        return (self.GF.producto(0x0e, s0) ^ 
+                self.GF.producto(0x0b, s1) ^ 
+                self.GF.producto(0x0d, s2) ^ 
+                self.GF.producto(0x09, s3))
 
     '''
     5.1.4 ADDROUNDKEY()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
-    def AddRoundKey(self, State, roundKey):
-        pass
-
+    def AddRoundKey(self, State, roundKey):  #Diria que aixó es equivalent, ja li fotras una ulladeta
+        newState = [0]*16
+        for i in range(16):
+            newState[i] = State[i] ^ roundKey[i]
+        return newState
+    
     '''
     5.2 KEYEXPANSION()
     FIPS 197: Advanced Encryption Standard (AES)
