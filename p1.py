@@ -22,15 +22,19 @@ class G_F:
             self.Tabla_LOG = [0]*256
             self.Tabla_EXP[0] = 1
             self.Tabla_LOG[1] = 0
-            gi = self.g
+
+            exp_val = 1
+            elementsGenerated = set()
             for i in range(1, 255):
-                self.Tabla_EXP[i] = gi
-                self.Tabla_LOG[gi] = i
-                gi = self.productoPolinomico(gi, self.g)
-            if gi == 0x1:
+                exp_val = self.productoPolinomico(exp_val, self.g)
+                self.Tabla_EXP[i] = exp_val
+                self.Tabla_LOG[exp_val] = i
+                elementsGenerated.add(exp_val)
+            
+            if len(elementsGenerated) == 254:  # Si vols comprovar amb 255, s'hauria d'afegir l'1 manual
                 gFound = True
             else:
-                self.g += 1
+                self.g += 1       
         # Duplicamos Tabla_EXP
         for i in range(255, 512):
             self.Tabla_EXP[i] = self.Tabla_EXP[i - 255]
@@ -69,6 +73,8 @@ class G_F:
     Se calcula usando la definición en términos de Tabla_EXP y Tabla_LOG.
     '''
     def producto(self, a, b):
+        if a == 0 or b == 0:
+            return 0
         logA = self.Tabla_LOG[a]
         logB = self.Tabla_LOG[b]
         return self.Tabla_EXP[logA + logB]
@@ -109,7 +115,7 @@ class AES:
         self.Polinomio_Irreducible = Polinomio_Irreducible
         self.GF = G_F(self.Polinomio_Irreducible)
 
-        self.SBox = [0]*256;
+        self.SBox = [0]*256
         for i in range(len(self.SBox)):
             b = self.GF.inverso(i)
             for j in range(8):
@@ -122,7 +128,7 @@ class AES:
                 bit = bi^bi4^bi5^bi6^bi7^ci
                 self.SBox[i] |= bit << j
 
-        self.InvSBox = [0]*256;
+        self.InvSBox = [0]*256
         for i in range(len(self.InvSBox)):
             self.InvSBox[self.SBox[i]] = i
 
@@ -188,38 +194,41 @@ class AES:
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def MixColumns(self, State):
+        pass
 
     '''
     5.3.3 INVMIXCOLUMNS()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def InvMixColumns(self, State):
+        pass
 
     '''
     5.1.4 ADDROUNDKEY()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def AddRoundKey(self, State, roundKey):
+        pass
 
     '''
     5.2 KEYEXPANSION()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def KeyExpansion(self, key):
-
+        pass
     '''
     5.1 Cipher(), Algorithm 1 pág. 12
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def Cipher(self, State, Nr, Expanded_KEY):
-
+        pass
     '''
     5. InvCipher()
     Algorithm 3 pág. 20 o Algorithm 4 pág. 25. Son equivalentes
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def InvCipher(self, State, Nr, Expanded_KEY):
-
+        pass
     '''
     Entrada: Nombre del fichero a cifrar.
     Salida: Fichero cifrado usando la clave utilizada en el constructor de la clase.
@@ -234,7 +243,7 @@ class AES:
     el sufijo .enc al nombre del fichero a cifrar: NombreFichero --> NombreFichero.enc
     '''
     def encrypt_file(self, fichero):
-
+        pass
     '''
     Entrada: Nombre del fichero a descifrar.
     Salida: Fichero descifrado usando la clave utilizada en el constructor de la clase.
@@ -243,3 +252,4 @@ class AES:
     a descifrar: NombreFichero --> NombreFichero.dec
     '''
     def decrypt_file(self, fichero):
+        pass
