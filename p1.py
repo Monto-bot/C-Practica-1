@@ -16,25 +16,28 @@ class G_F:
         self.Polinomio_Irreducible = Polinomio_Irreducible
 
         gFound = False
-        self.g = 0x2
-        while not gFound:
-            self.Tabla_EXP = [0]*512
-            self.Tabla_LOG = [0]*256
-            self.Tabla_EXP[0] = 1
-            self.Tabla_LOG[1] = 0
+        self.g = 0x2 
+        self.Tabla_EXP = [0] * 512
+        self.Tabla_LOG = [0] * 256
+        self.Tabla_EXP[0] = 1
+        self.Tabla_LOG[1] = 0
 
+        while not gFound:
             exp_val = 1
-            elementsGenerated = set()
+            valid = True
             for i in range(1, 255):
                 exp_val = self.productoPolinomico(exp_val, self.g)
+                if exp_val == 1 and i < 254:
+                    valid = False
+                    break
                 self.Tabla_EXP[i] = exp_val
                 self.Tabla_LOG[exp_val] = i
-                elementsGenerated.add(exp_val)
             
-            if len(elementsGenerated) == 254:  # Si vols comprovar amb 255, s'hauria d'afegir l'1 manual
+            exp_val = self.productoPolinomico(exp_val, self.g) # exp_val es g^255
+            if valid and exp_val == 1:  # Ha d'acabar diferent a 1, ja que l'1 es g^0
                 gFound = True
             else:
-                self.g += 1       
+                self.g += 1
         # Duplicamos Tabla_EXP
         for i in range(255, 512):
             self.Tabla_EXP[i] = self.Tabla_EXP[i - 255]
@@ -73,8 +76,6 @@ class G_F:
     Se calcula usando la definición en términos de Tabla_EXP y Tabla_LOG.
     '''
     def producto(self, a, b):
-        if a == 0 or b == 0:
-            return 0
         logA = self.Tabla_LOG[a]
         logB = self.Tabla_LOG[b]
         return self.Tabla_EXP[logA + logB]
