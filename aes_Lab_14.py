@@ -235,10 +235,13 @@ class AES:
     5.1.4 ADDROUNDKEY()
     FIPS 197: Advanced Encryption Standard (AES)
     '''
-    def AddRoundKey(self, State, roundKey):  #Diria que aixó es equivalent, ja li fotras una ulladeta
-        newState = [0]*16
-        for i in range(16):
-            newState[i] = State[i] ^ roundKey[i]
+    def AddRoundKey(self, State, roundKey):
+        newState = [0] * 16
+        for i in range(16): 
+            r = i//4
+            c = i%4
+            index = r + c * 4
+            newState[index] = State[index] ^ roundKey[index]
         return newState
     
     '''
@@ -246,20 +249,71 @@ class AES:
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def KeyExpansion(self, key):
-        pass
+        size = len(key)
+        if size == 16:
+            Nk, Nr = 4, 10
+        elif size == 24:
+            Nk, Nr = 6, 12
+        else: # size == 32
+            Nk, Nr = 8, 14
+
+        w = []
+        for i in range(Nk):
+            w.append([key[4*i], key[4*i + 1], key[4*i + 2], key[4*i + 3]])
+
+        for i in range(Nk, 4*(Nr + 1)):
+            temp = w[i - 1][:]
+            if i % Nk == 0:
+                temp = temp[1:] + temp[:1]  #RotWord
+                temp = [self.SBox[b] for b in temp] #SubWord
+                rcon = self.Rcon[(i // Nk) - 1] #Rcon[i/Nk]
+                temp = [temp[j] ^ rcon[j] for j in range(4)]
+            elif Nk > 6 and i % Nk == 4:
+                temp = [self.SBox[b] for b in temp] #SubWord
+
+            ant = w[i - Nk]
+            w.append([ant[j] ^ temp[j] for j in range(4)])
+
+        eKey = []
+        for r in range(Nr + 1):
+            for c in range(4):
+                eKey.extend(w[r*4 + c])
+        return eKey
+
     '''
     5.1 Cipher(), Algorithm 1 pág. 12
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def Cipher(self, State, Nr, Expanded_KEY):
-        pass
+        State = self.AddRoundKey(State, Expanded_KEY[0:16])
+        for round in range(1, Nr):
+            State = self.SubBytes(State)
+            State = self.ShiftRows(State)
+            State = self.MixColumns(State)
+            State = self.AddRoundKey(State, Expanded_KEY[round*16:(round+1)*16])
+        
+        State = self.SubBytes(State)
+        State = self.ShiftRows(State)
+        State = self.AddRoundKey(State, Expanded_KEY[Nr*16:(Nr+1)*16])
+        return State    
+    
     '''
     5. InvCipher()
     Algorithm 3 pág. 20 o Algorithm 4 pág. 25. Son equivalentes
     FIPS 197: Advanced Encryption Standard (AES)
     '''
     def InvCipher(self, State, Nr, Expanded_KEY):
-        pass
+        State = self.AddRoundKey(State, Expanded_KEY[Nr*16:(Nr+1)*16])
+        for round in range(Nr-1,0,-1):
+            State = self.InvShiftRows(State)
+            State = self.InvSubBytes(State)
+            State = self.AddRoundKey(State, Expanded_KEY[round*16:(round+1)*16])
+            State = self.InvMixColumns(State)
+        State = self.InvShiftRows(State)
+        State = self.InvSubBytes(State)
+        State = self.AddRoundKey(State, Expanded_KEY[0:16])
+        return State
+
     '''
     Entrada: Nombre del fichero a cifrar.
     Salida: Fichero cifrado usando la clave utilizada en el constructor de la clase.
